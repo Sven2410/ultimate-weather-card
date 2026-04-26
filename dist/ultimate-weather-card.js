@@ -8,7 +8,7 @@
  *  - Tijdlijn-animatie gesynchroniseerd met geschatte GIF-looptijd
  */
 
-const UWCVERSION = '1.0.4';
+const UWCVERSION = '1.0.8';
 console.info(
   '%c ULTIMATE-WEATHER-CARD %c v' + UWCVERSION + ' ',
   'background:#026FA1;color:#fff;padding:2px 6px;border-radius:3px 0 0 3px;font-weight:bold',
@@ -33,14 +33,14 @@ console.info(
 //   x = (0.44×735 − 210) / 315 = (323.4 − 210) / 315 = 36.0% ≈ 36%
 //   y = (0.38×735 − 210) / 315 = (279.3 − 210) / 315 = 22.0% ≈ 22%
 
-var UWC_THUMB_SIZE = '210%';
-var UWC_THUMB_POS  = '39% 27%';
+var UWC_THUMB_SIZE = '185%';
+var UWC_THUMB_POS  = '57% 49.5%';
 
-var UWC_POPUP_SIZE = '175%';
-var UWC_POPUP_POS  = '36% 22%';
+var UWC_POPUP_SIZE = '173%';
+var UWC_POPUP_POS  = '55% 44.5%';
 
 // GIF heeft ±22 frames (3 history + 1 nu + 18 forecast) × ~500ms ≈ 11s looptijd
-var UWC_GIF_LOOP_SEC = 11;
+var UWC_GIF_LOOP_SEC = 15;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -121,7 +121,7 @@ class UltimateWeatherCard extends HTMLElement {
     super();
     this.attachShadow({mode:'open'});
     this._config={}; this._hass=null; this._domBuilt=false;
-    this._forecast=[]; this._forecastSub=null; this._radarTimer=null;
+    this._forecast=[]; this._forecastSub=null; this._radarTimer=null; this._timeTimer=null;
   }
 
   static getConfigElement() { return document.createElement('ultimate-weather-card-editor'); }
@@ -148,7 +148,7 @@ class UltimateWeatherCard extends HTMLElement {
   }
 
   connectedCallback()    { if (this._domBuilt) this._startRadarRefresh(); }
-  disconnectedCallback() { this._stopRadarRefresh(); this._unsubForecast(); }
+  disconnectedCallback() { this._stopRadarRefresh(); this._unsubForecast(); this._stopTimeIndicator(); }
 
   _startRadarRefresh() {
     if (this._radarTimer) return;
@@ -194,12 +194,62 @@ class UltimateWeatherCard extends HTMLElement {
     this._setRadarBg('.popup-radar-bg', uwcRadarUrlLarge());
     ov.classList.add('open');
     document.body.style.overflow='hidden';
+    this._startTimeIndicator();
   }
   _closePopup() {
     var ov=this.shadowRoot.querySelector('.popup-overlay');
     if (!ov) return;
     ov.classList.remove('open');
     document.body.style.overflow='';
+    this._stopTimeIndicator();
+  }
+
+  // Geeft HH:MM terug van een Date-object
+  _fmt(date) {
+    return String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');
+  }
+
+  // Bereken 5 kloktijden voor de tijdlijn op basis van huidige tijd
+  // Afgerond op 5 minuten naar beneden
+  _buildTimes() {
+    var now=new Date();
+    now.setSeconds(0,0);
+    now.setMinutes(Math.floor(now.getMinutes()/5)*5);
+    var offsets=[-30,0,60,120,180]; // in minuten t.o.v. nu
+    var pcts=['0%','14.3%','42.9%','71.4%','100%'];
+    var html='';
+    for(var i=0;i<offsets.length;i++){
+      var t=new Date(now.getTime()+offsets[i]*60000);
+      html+='<span class="tl-tick" style="left:'+pcts[i]+'">'+this._fmt(t)+'</span>';
+    }
+    return html;
+  }
+
+  // Gesynchroniseerde tijdsindicator — loopt mee met de tijdlijn-animatie
+  // 15 seconden = 210 minuten radartime → update elke ~357ms (= 5 radarminuten)
+  _startTimeIndicator() {
+    this._stopTimeIndicator();
+    var self=this;
+    var totalMs=UWC_GIF_LOOP_SEC*1000;
+    var totalMin=210;
+    var snapNow=new Date();
+    snapNow.setSeconds(0,0);
+    snapNow.setMinutes(Math.floor(snapNow.getMinutes()/5)*5);
+    var radarStart=new Date(snapNow.getTime()-30*60000);
+    var origin=Date.now();
+    function tick(){
+      var elapsed=(Date.now()-origin)%totalMs;
+      var fraction=elapsed/totalMs;
+      var minOffset=Math.round(fraction*totalMin/5)*5;
+      var frameTime=new Date(radarStart.getTime()+minOffset*60000);
+      var el=self.shadowRoot&&self.shadowRoot.querySelector('#popup-clock');
+      if(el) el.textContent=self._fmt(frameTime);
+    }
+    tick();
+    self._timeTimer=setInterval(tick,357);
+  }
+  _stopTimeIndicator(){
+    if(this._timeTimer){clearInterval(this._timeTimer);this._timeTimer=null;}
   }
 
   // ── Build DOM ─────────────────────────────────────────────────────────────
@@ -286,6 +336,17 @@ class UltimateWeatherCard extends HTMLElement {
       '.popup-close:hover{background:var(--primary-color);color:#fff;}',
       '.popup-close svg{width:16px;height:16px;fill:currentColor;}',
 
+
+      /* Tijdsbereik label op de radar (links-boven) */
+      '.clock-overlay{',
+      '  position:absolute;top:8px;left:10px;z-index:5;',
+      '  background:rgba(0,0,0,0.65);',
+      '  color:rgba(255,255,255,0.9);',
+      '  font-size:11px;font-weight:600;letter-spacing:.03em;',
+      '  padding:3px 8px;border-radius:6px;',
+      '  pointer-events:none;font-variant-numeric:tabular-nums;',
+      '  line-height:1.4;',
+      '}',
       /* Popup radar — zelfde background-image techniek, iets minder ingezoomd */
       '.popup-radar-wrap{width:100%;aspect-ratio:1/1;overflow:hidden;position:relative;background:#0f1f0f;}',
       '.popup-radar-bg{',
@@ -361,20 +422,8 @@ class UltimateWeatherCard extends HTMLElement {
         '</div>';
     }
 
-    // Tijdlijn ticks: -30m, Nu, +1u, +2u, +3u
-    // Posities als % van de balk (totaal 210 min):
-    //   -30m = 0%, Nu = 14.3%, +1u = 14.3+28.6=42.9%, +2u = 71.4%, +3u = 100%
-    var ticks = [
-      {pct:'0%',   label:'\u221230m'},
-      {pct:'14.3%',label:'Nu'},
-      {pct:'42.9%',label:'+1u'},
-      {pct:'71.4%',label:'+2u'},
-      {pct:'100%', label:'+3u'},
-    ];
-    var tickHtml='';
-    ticks.forEach(function(t){
-      tickHtml+='<span class="tl-tick" style="left:'+t.pct+'">'+t.label+'</span>';
-    });
+    // Tijdlijn ticks met echte kloktijden (afgerond op 5 min)
+    var tickHtml = this._buildTimes();
 
     this.shadowRoot.innerHTML =
       '<style>'+style+'</style>'+
@@ -406,6 +455,7 @@ class UltimateWeatherCard extends HTMLElement {
           '</div>'+
           '<div class="popup-radar-wrap">'+
             '<div class="popup-radar-bg"></div>'+
+            '<div class="clock-overlay" id="popup-clock">\u2014</div>'+
           '</div>'+
           /* Tijdlijn */
           '<div class="timeline-wrap">'+
