@@ -8,7 +8,7 @@
  *  - Tijdlijn-animatie gesynchroniseerd met geschatte GIF-looptijd
  */
 
-const UWCVERSION = '1.0.8';
+const UWCVERSION = '1.0.9';
 console.info(
   '%c ULTIMATE-WEATHER-CARD %c v' + UWCVERSION + ' ',
   'background:#026FA1;color:#fff;padding:2px 6px;border-radius:3px 0 0 3px;font-weight:bold',
@@ -143,11 +143,12 @@ class UltimateWeatherCard extends HTMLElement {
       this._domBuilt = true;
       this._subscribeForecast();
       this._startRadarRefresh();
+      this._startTimeIndicator();
     }
     this._render();
   }
 
-  connectedCallback()    { if (this._domBuilt) this._startRadarRefresh(); }
+  connectedCallback()    { if (this._domBuilt) { this._startRadarRefresh(); this._startTimeIndicator(); } }
   disconnectedCallback() { this._stopRadarRefresh(); this._unsubForecast(); this._stopTimeIndicator(); }
 
   _startRadarRefresh() {
@@ -194,14 +195,12 @@ class UltimateWeatherCard extends HTMLElement {
     this._setRadarBg('.popup-radar-bg', uwcRadarUrlLarge());
     ov.classList.add('open');
     document.body.style.overflow='hidden';
-    this._startTimeIndicator();
   }
   _closePopup() {
     var ov=this.shadowRoot.querySelector('.popup-overlay');
     if (!ov) return;
     ov.classList.remove('open');
     document.body.style.overflow='';
-    this._stopTimeIndicator();
   }
 
   // Geeft HH:MM terug van een Date-object
@@ -242,8 +241,11 @@ class UltimateWeatherCard extends HTMLElement {
       var fraction=elapsed/totalMs;
       var minOffset=Math.round(fraction*totalMin/5)*5;
       var frameTime=new Date(radarStart.getTime()+minOffset*60000);
-      var el=self.shadowRoot&&self.shadowRoot.querySelector('#popup-clock');
-      if(el) el.textContent=self._fmt(frameTime);
+      var label=self._fmt(frameTime);
+      var el1=self.shadowRoot&&self.shadowRoot.querySelector('#thumb-clock');
+      var el2=self.shadowRoot&&self.shadowRoot.querySelector('#popup-clock');
+      if(el1) el1.textContent=label;
+      if(el2) el2.textContent=label;
     }
     tick();
     self._timeTimer=setInterval(tick,357);
@@ -431,6 +433,7 @@ class UltimateWeatherCard extends HTMLElement {
       '<ha-card>'+
         '<div class="radar-wrap" id="radar-thumb">'+
           '<div class="radar-bg"></div>'+
+          '<div class="clock-overlay" id="thumb-clock">\u2014</div>'+
           '<div class="badge badge-time">+3u</div>'+
           '<div class="badge badge-zoom">'+zoomSvg+'</div>'+
         '</div>'+
