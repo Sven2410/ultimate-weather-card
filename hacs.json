@@ -1,0 +1,10 @@
+{
+  "name": "Ultimate Weather Card",
+  "version": "1.0.0",
+  "hacs": "1.6.0",
+  "homeassistant": "2024.1.0",
+  "documentations": "https://github.com/Sven2410/ultimate-weather-card/blob/main/README.md",
+  "issues": "https://github.com/Sven2410/ultimate-weather-card/issues",
+  "filename": "dist/ultimate-weather-card.js",
+  "content_in_root": false
+}
