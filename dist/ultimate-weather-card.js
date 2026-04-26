@@ -8,7 +8,7 @@
  *  - Tijdlijn-animatie gesynchroniseerd met geschatte GIF-looptijd
  */
 
-const UWCVERSION = '1.0.9';
+const UWCVERSION = '1.1.0';
 console.info(
   '%c ULTIMATE-WEATHER-CARD %c v' + UWCVERSION + ' ',
   'background:#026FA1;color:#fff;padding:2px 6px;border-radius:3px 0 0 3px;font-weight:bold',
@@ -143,12 +143,11 @@ class UltimateWeatherCard extends HTMLElement {
       this._domBuilt = true;
       this._subscribeForecast();
       this._startRadarRefresh();
-      this._startTimeIndicator();
     }
     this._render();
   }
 
-  connectedCallback()    { if (this._domBuilt) { this._startRadarRefresh(); this._startTimeIndicator(); } }
+  connectedCallback()    { if (this._domBuilt) this._startRadarRefresh(); }
   disconnectedCallback() { this._stopRadarRefresh(); this._unsubForecast(); this._stopTimeIndicator(); }
 
   _startRadarRefresh() {
@@ -195,6 +194,7 @@ class UltimateWeatherCard extends HTMLElement {
     this._setRadarBg('.popup-radar-bg', uwcRadarUrlLarge());
     ov.classList.add('open');
     document.body.style.overflow='hidden';
+    this._startTimeIndicator();
   }
   _closePopup() {
     var ov=this.shadowRoot.querySelector('.popup-overlay');
@@ -242,9 +242,7 @@ class UltimateWeatherCard extends HTMLElement {
       var minOffset=Math.round(fraction*totalMin/5)*5;
       var frameTime=new Date(radarStart.getTime()+minOffset*60000);
       var label=self._fmt(frameTime);
-      var el1=self.shadowRoot&&self.shadowRoot.querySelector('#thumb-clock');
       var el2=self.shadowRoot&&self.shadowRoot.querySelector('#popup-clock');
-      if(el1) el1.textContent=label;
       if(el2) el2.textContent=label;
     }
     tick();
@@ -266,7 +264,7 @@ class UltimateWeatherCard extends HTMLElement {
       /* ── Card ── */
       'ha-card{',
       '  display:flex;flex-direction:row;align-items:center;',
-      '  padding:10px 12px;gap:12px;box-sizing:border-box;',
+      '  padding:8px 12px;gap:10px;box-sizing:border-box;',
       '}',
 
       /* ── Radar thumbnail ──
@@ -274,7 +272,7 @@ class UltimateWeatherCard extends HTMLElement {
        * Geen transform op de afbeelding → animated GIF blijft animeren.
        */
       '.radar-wrap{',
-      '  flex:0 0 auto;width:116px;height:116px;',
+      '  flex:0 0 auto;width:102px;height:102px;',
       '  border-radius:14px;overflow:hidden;position:relative;',
       '  background:#0f1f0f;box-shadow:0 2px 10px rgba(0,0,0,0.4);',
       '  cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;',
@@ -299,17 +297,17 @@ class UltimateWeatherCard extends HTMLElement {
       /* ── Weerinfo ── */
       '.weather-wrap{flex:1 1 0;min-width:0;display:flex;flex-direction:column;justify-content:space-between;gap:5px;}',
       '.current{display:flex;align-items:center;gap:8px;}',
-      '.current-icon{--mdc-icon-size:42px;color:var(--primary-color);flex:0 0 auto;}',
+      '.current-icon{--mdc-icon-size:36px;color:var(--primary-color);flex:0 0 auto;}',
       '.current-info{flex:1 1 0;min-width:0;}',
       '.condition-text{font-size:.75em;color:var(--secondary-text-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;}',
-      '.temp-current{font-size:1.45em;font-weight:700;color:var(--primary-text-color);line-height:1.1;letter-spacing:-.02em;}',
+      '.temp-current{font-size:1.25em;font-weight:700;color:var(--primary-text-color);line-height:1.1;letter-spacing:-.02em;}',
       '.divider{height:1px;background:var(--divider-color);opacity:.6;}',
       '.forecast-row{display:flex;justify-content:space-between;align-items:center;}',
       '.fc-day{display:flex;flex-direction:column;align-items:center;gap:1px;flex:1 1 0;}',
-      '.fc-day-name{font-size:.68em;font-weight:700;color:var(--secondary-text-color);text-transform:uppercase;letter-spacing:.06em;}',
-      '.fc-icon{--mdc-icon-size:22px;color:var(--primary-color);}',
-      '.fc-high{font-size:.8em;font-weight:700;color:var(--primary-text-color);line-height:1.1;}',
-      '.fc-low{font-size:.7em;color:var(--secondary-text-color);line-height:1.1;}',
+      '.fc-day-name{font-size:.6em;font-weight:700;color:var(--secondary-text-color);text-transform:uppercase;letter-spacing:.04em;}',
+      '.fc-icon{--mdc-icon-size:18px;color:var(--primary-color);}',
+      '.fc-high{font-size:.72em;font-weight:700;color:var(--primary-text-color);line-height:1.1;}',
+      '.fc-low{font-size:.62em;color:var(--secondary-text-color);line-height:1.1;}',
 
       /* ── Popup overlay ── */
       '.popup-overlay{',
@@ -415,7 +413,7 @@ class UltimateWeatherCard extends HTMLElement {
     var closeSvg = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
 
     var fcSlots='';
-    for (var i=0;i<3;i++) {
+    for (var i=0;i<5;i++) {
       fcSlots+='<div class="fc-day" id="fc-'+i+'">'+
         '<span class="fc-day-name">\u2014</span>'+
         '<ha-icon class="fc-icon" icon="mdi:weather-cloudy"></ha-icon>'+
@@ -433,7 +431,6 @@ class UltimateWeatherCard extends HTMLElement {
       '<ha-card>'+
         '<div class="radar-wrap" id="radar-thumb">'+
           '<div class="radar-bg"></div>'+
-          '<div class="clock-overlay" id="thumb-clock">\u2014</div>'+
           '<div class="badge badge-time">+3u</div>'+
           '<div class="badge badge-zoom">'+zoomSvg+'</div>'+
         '</div>'+
@@ -515,8 +512,8 @@ class UltimateWeatherCard extends HTMLElement {
     if(tempEl) tempEl.textContent=(temp!==null&&temp!==undefined)
       ?parseFloat(temp).toFixed(1).replace('.',',')+'\u00a0'+unit:'\u2014';
 
-    var fc=this._forecast?this._forecast.slice(0,3):[];
-    for(var i=0;i<3;i++){
+    var fc=this._forecast?this._forecast.slice(0,5):[];
+    for(var i=0;i<5;i++){
       var day=fc[i];
       var dayEl=sr.querySelector('#fc-'+i);
       if(!dayEl) continue;
