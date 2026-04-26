@@ -8,7 +8,7 @@
  *  - Tijdlijn-animatie gesynchroniseerd met geschatte GIF-looptijd
  */
 
-const UWCVERSION = '1.1.0';
+const UWCVERSION = '1.1.1';
 console.info(
   '%c ULTIMATE-WEATHER-CARD %c v' + UWCVERSION + ' ',
   'background:#026FA1;color:#fff;padding:2px 6px;border-radius:3px 0 0 3px;font-weight:bold',
@@ -272,7 +272,7 @@ class UltimateWeatherCard extends HTMLElement {
        * Geen transform op de afbeelding → animated GIF blijft animeren.
        */
       '.radar-wrap{',
-      '  flex:0 0 auto;width:102px;height:102px;',
+      '  flex:0 0 auto;width:104px;height:104px;',
       '  border-radius:14px;overflow:hidden;position:relative;',
       '  background:#0f1f0f;box-shadow:0 2px 10px rgba(0,0,0,0.4);',
       '  cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;',
